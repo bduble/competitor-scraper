@@ -5,13 +5,15 @@ from bs4 import BeautifulSoup
 from supabase import create_client, Client
 from playwright.sync_api import sync_playwright
 
-# ─── Load Supabase Environment Variables ──────────────────────────────
+# ─── Load Supabase Environment Variables ──────────────────────────────────────
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-BRIGHTDATA_PROXY = os.getenv("BRIGHTDATA_PROXY")      # e.g. brd.superproxy.io:33335
-BRIGHTDATA_USER = os.getenv("BRIGHTDATA_USER")
-BRIGHTDATA_PASS = os.getenv("BRIGHTDATA_PASS")
+
+# BrightData proxy settings from env or hardcode for now
+BRIGHTDATA_PROXY = os.getenv("BRIGHTDATA_PROXY", "brd.superproxy.io:33335")
+BRIGHTDATA_USER = os.getenv("BRIGHTDATA_USER", "brd-customer-XXX-zone-residential_proxy1")
+BRIGHTDATA_PASS = os.getenv("BRIGHTDATA_PASS", "xxxxxxxxxxxxxxxx")
 
 print(f"🔐 Supabase URL: {SUPABASE_URL}")
 print(f"🔐 Supabase Key Loaded: {'Yes' if SUPABASE_KEY else 'No'}")
@@ -19,21 +21,23 @@ print(f"🌍 Using BrightData Proxy: {BRIGHTDATA_PROXY}")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("❌ SUPABASE_URL or SUPABASE_KEY environment variable is missing!")
-if not BRIGHTDATA_PROXY or not BRIGHTDATA_USER or not BRIGHTDATA_PASS:
-    raise ValueError("❌ BrightData proxy env variables missing!")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ─── Constants ───────────────────────────────────────────────────────
+# ─── Constants ────────────────────────────────────────────────────────────────
 
 BASE_URL = "https://www.donringlerchevrolet.com"
 INVENTORY_URL = f"{BASE_URL}/used-vehicles/"
+
+# ─── Utility Functions ────────────────────────────────────────────────────────
 
 def parse_price(text):
     return int(re.sub(r"[^\d]", "", text)) if text else None
 
 def parse_mileage(text):
     return int(re.sub(r"[^\d]", "", text)) if text else None
+
+# ─── Vehicle Extraction ───────────────────────────────────────────────────────
 
 def extract_vehicle_data(card):
     try:
@@ -63,29 +67,46 @@ def extract_vehicle_data(card):
         print(f"[!] Failed to extract vehicle: {e}")
         return None
 
+# ─── Fetch Inventory with Playwright & Proxy ──────────────────────────────────
+
 def fetch_inventory():
     print("🔍 Fetching inventory with Playwright + BrightData Proxy...")
     all_vehicles = []
     with sync_playwright() as p:
-        # Proxy dict for Playwright
         proxy_settings = {
             "server": f"http://{BRIGHTDATA_PROXY}",
             "username": BRIGHTDATA_USER,
             "password": BRIGHTDATA_PASS
         }
         browser = p.chromium.launch(headless=True, proxy=proxy_settings)
-        context = browser.new_context(ignore_https_errors=True)
+        context = browser.new_context(
+            ignore_https_errors=True,
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/124.0.0.0 Safari/537.36",
+            viewport={'width': 1280, 'height': 900},
+            extra_http_headers={
+                "Accept-Language": "en-US,en;q=0.9",
+                "Upgrade-Insecure-Requests": "1",
+                "DNT": "1",
+            }
+        )
         page = context.new_page()
-        page.goto(INVENTORY_URL, timeout=90000)
-        html = page.content()
+        try:
+            page.goto(INVENTORY_URL, timeout=90000, wait_until="domcontentloaded")
+            html = page.content()
+        except Exception as e:
+            print(f"❌ Error loading page: {e}")
+            browser.close()
+            return []
         browser.close()
 
         soup = BeautifulSoup(html, "html.parser")
         cards = soup.select(".vehicle-card")
 
         if not cards:
-            print("⚠️ No vehicle cards found. Dumping HTML for debug.")
-            print(html[:1500])
+            print("⚠️ Selector '.vehicle-card' not found. Dumping HTML chunk for debug:")
+            print(html[:2000])  # print first 2,000 chars for debug
             return []
 
         for card in cards:
@@ -95,11 +116,15 @@ def fetch_inventory():
     print(f"→ Total vehicles found: {len(all_vehicles)}")
     return all_vehicles
 
+# ─── Sync to Supabase ─────────────────────────────────────────────────────────
+
 def sync_to_supabase(vehicles):
     print(f"🚚 Syncing {len(vehicles)} vehicles to Supabase...")
     for v in vehicles:
         print(f"Pushing {v['inventory_id']} - {v['year']} {v['make']} {v['model']} @ ${v['price']}")
         supabase.table("market_comps").upsert(v, on_conflict="inventory_id").execute()
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
     vehicles = fetch_inventory()
