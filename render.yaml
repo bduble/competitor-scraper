@@ -1,12 +1,18 @@
-services:
-  - type: cron
-    name: donringler-scraper
+services: []
+
+cron:
+  - name: "donringler-scraper"
+    type: cron
+    schedule: "*/15 * * * *"  # every 15 minutes
+    region: oregon
+    branch: main
     runtime: python
-    schedule: "0 5 * * *"
-    buildCommand: "pip install -r requirements.txt && playwright install"
-    startCommand: "python scrape_donringler.py"
+    buildCommand: |
+      pip install -r requirements.txt
+      playwright install --with-deps
+    startCommand: python scrape_donringler.py
     envVars:
       - key: SUPABASE_URL
-        value: https://your-project.supabase.co
+        sync: false
       - key: SUPABASE_KEY
-        value: your-service-role-key
+        sync: false
