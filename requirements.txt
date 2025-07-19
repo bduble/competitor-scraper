@@ -1,2 +1,5 @@
 playwright
 supabase
+requests
+beautifulsoup4
+supabase
