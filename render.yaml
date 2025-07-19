@@ -3,7 +3,7 @@ services:
     name: donringler-scraper
     runtime: python
     schedule: "0 5 * * *"
-    buildCommand: ""
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "python scrape_donringler.py"
     envVars:
       - key: SUPABASE_URL
