@@ -72,14 +72,30 @@ def fetch_inventory():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto(INVENTORY_URL, timeout=60000)
+        try:
+            # Wait up to 20s for the first vehicle card or fallback to any 'li' in case they use li.grid-item, etc
+            page.wait_for_selector(".vehicle-card, li", timeout=20000)
+        except Exception:
+            print("⚠️ Selector '.vehicle-card' not found within 20s. Dumping HTML chunk for debug:")
+            print(page.content()[:3000])  # Print first 3000 chars
+            browser.close()
+            return []
+
         html = page.content()
         browser.close()
 
         soup = BeautifulSoup(html, "html.parser")
         cards = soup.select(".vehicle-card")
+        if not cards:
+            # Try more generic: see if any 'li' elements have recognizable structure (for troubleshooting)
+            print("⚠️ No vehicle cards found. Attempting fallback selector 'li'")
+            cards = soup.select("li")
+            print(f"Found {len(cards)} <li> elements. Dumping sample HTML for debug:")
+            for li in cards[:3]:
+                print(str(li)[:1000])
 
         if not cards:
-            print("⚠️ No vehicle cards found.")
+            print("⚠️ Still no cards found. Exiting.")
             return []
 
         for card in cards:
