@@ -3,7 +3,7 @@ services: []
 cron:
   - name: "donringler-scraper"
     type: cron
-    schedule: "*/15 * * * *"  # every 15 minutes
+    schedule: "*/15 * * * *"
     region: oregon
     branch: main
     runtime: python
