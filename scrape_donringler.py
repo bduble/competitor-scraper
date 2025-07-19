@@ -1,9 +1,9 @@
 import os
 import re
-import requests
-from bs4 import BeautifulSoup
 from datetime import datetime
+from bs4 import BeautifulSoup
 from supabase import create_client, Client
+from playwright.sync_api import sync_playwright
 
 # ─── Load Supabase Environment Variables ──────────────────────────────────────
 
@@ -22,16 +22,6 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 BASE_URL = "https://www.donringlerchevrolet.com"
 INVENTORY_URL = f"{BASE_URL}/used-vehicles/"
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/115.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-}
-
 
 # ─── Utility Functions ────────────────────────────────────────────────────────
 
@@ -72,36 +62,32 @@ def extract_vehicle_data(card):
         print(f"[!] Failed to extract vehicle: {e}")
         return None
 
-# ─── Fetch All Vehicles ───────────────────────────────────────────────────────
+# ─── Fetch Inventory with Playwright ──────────────────────────────────────────
 
 def fetch_inventory():
-    print("🔍 Fetching inventory from Don Ringler...")
+    print("🔍 Fetching inventory with Playwright...")
     all_vehicles = []
-    page = 1
 
-    while True:
-        paged_url = f"{INVENTORY_URL}?page={page}"
-        res = requests.get(paged_url, headers=HEADERS)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(INVENTORY_URL, timeout=60000)
+        html = page.content()
+        browser.close()
 
-        if res.status_code != 200:
-            print(f"❌ Failed to fetch page {page}: Status {res.status_code}")
-            break
-
-        soup = BeautifulSoup(res.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
         cards = soup.select(".vehicle-card")
 
         if not cards:
-            print(f"ℹ️ No vehicle cards found on page {page}. Ending pagination.")
-            break
+            print("⚠️ No vehicle cards found.")
+            return []
 
         for card in cards:
             v = extract_vehicle_data(card)
             if v:
                 all_vehicles.append(v)
 
-        print(f"→ Page {page}: {len(cards)} vehicles")
-        page += 1
-
+    print(f"→ Total vehicles found: {len(all_vehicles)}")
     return all_vehicles
 
 # ─── Sync to Supabase ─────────────────────────────────────────────────────────
