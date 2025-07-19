@@ -1,26 +1,38 @@
+import os
+import re
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from supabase import create_client, Client
-import re
 
-# Supabase config (can also be set with Render env vars)
-import os
+# ─── Load Supabase Environment Variables ──────────────────────────────────────
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
+print(f"🔐 Supabase URL: {SUPABASE_URL}")
+print(f"🔐 Supabase Key Loaded: {'Yes' if SUPABASE_KEY else 'No'}")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("❌ SUPABASE_URL or SUPABASE_KEY environment variable is missing!")
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# ─── Constants ────────────────────────────────────────────────────────────────
 
 BASE_URL = "https://www.donringlerchevrolet.com"
 INVENTORY_URL = f"{BASE_URL}/used-vehicles/"
-
 HEADERS = {"User-Agent": "Mozilla/5.0"}
+
+# ─── Utility Functions ────────────────────────────────────────────────────────
 
 def parse_price(text):
     return int(re.sub(r"[^\d]", "", text)) if text else None
 
 def parse_mileage(text):
     return int(re.sub(r"[^\d]", "", text)) if text else None
+
+# ─── Vehicle Extraction ───────────────────────────────────────────────────────
 
 def extract_vehicle_data(card):
     try:
@@ -51,32 +63,47 @@ def extract_vehicle_data(card):
         print(f"[!] Failed to extract vehicle: {e}")
         return None
 
+# ─── Fetch All Vehicles ───────────────────────────────────────────────────────
+
 def fetch_inventory():
     print("🔍 Fetching inventory from Don Ringler...")
     all_vehicles = []
     page = 1
+
     while True:
         paged_url = f"{INVENTORY_URL}?page={page}"
         res = requests.get(paged_url, headers=HEADERS)
-        if res.status_code != 200 or "No vehicles found" in res.text:
+
+        if res.status_code != 200:
+            print(f"❌ Failed to fetch page {page}: Status {res.status_code}")
             break
+
         soup = BeautifulSoup(res.text, "html.parser")
         cards = soup.select(".vehicle-card")
+
         if not cards:
+            print(f"ℹ️ No vehicle cards found on page {page}. Ending pagination.")
             break
+
         for card in cards:
             v = extract_vehicle_data(card)
             if v:
                 all_vehicles.append(v)
+
         print(f"→ Page {page}: {len(cards)} vehicles")
         page += 1
+
     return all_vehicles
+
+# ─── Sync to Supabase ─────────────────────────────────────────────────────────
 
 def sync_to_supabase(vehicles):
     print(f"🚚 Syncing {len(vehicles)} vehicles to Supabase...")
     for v in vehicles:
         print(f"Pushing {v['inventory_id']} - {v['year']} {v['make']} {v['model']} @ ${v['price']}")
         supabase.table("market_comps").upsert(v, on_conflict="inventory_id").execute()
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
     vehicles = fetch_inventory()
