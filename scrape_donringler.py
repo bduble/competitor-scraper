@@ -18,6 +18,12 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# ─── BrightData Proxy ────────────────────────────────────────────────────────
+
+BRIGHTDATA_PROXY = "brd.superproxy.io:33335"
+BRIGHTDATA_USER = "brd-customer-hl_0bd654c8-zone-residential_proxy1"
+BRIGHTDATA_PASS = "ja8jg2js15go"
+
 # ─── Constants ────────────────────────────────────────────────────────────────
 
 BASE_URL = "https://www.donringlerchevrolet.com"
@@ -62,40 +68,37 @@ def extract_vehicle_data(card):
         print(f"[!] Failed to extract vehicle: {e}")
         return None
 
-# ─── Fetch Inventory with Playwright ──────────────────────────────────────────
+# ─── Fetch Inventory with Playwright + Proxy ──────────────────────────────────
 
 def fetch_inventory():
-    print("🔍 Fetching inventory with Playwright...")
+    print("🔍 Fetching inventory with Playwright + BrightData Proxy...")
     all_vehicles = []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto(INVENTORY_URL, timeout=60000)
-        try:
-            # Wait up to 20s for the first vehicle card or fallback to any 'li' in case they use li.grid-item, etc
-            page.wait_for_selector(".vehicle-card, li", timeout=20000)
-        except Exception:
-            print("⚠️ Selector '.vehicle-card' not found within 20s. Dumping HTML chunk for debug:")
-            print(page.content()[:3000])  # Print first 3000 chars
-            browser.close()
-            return []
-
+        browser = p.chromium.launch(
+            headless=True,
+            proxy={
+                "server": f"http://{BRIGHTDATA_PROXY}",
+                "username": BRIGHTDATA_USER,
+                "password": BRIGHTDATA_PASS,
+            }
+        )
+        page = browser.new_page(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+        )
+        page.goto(INVENTORY_URL, timeout=90000)
+        page.wait_for_timeout(7000)  # Wait for JS
         html = page.content()
         browser.close()
 
         soup = BeautifulSoup(html, "html.parser")
         cards = soup.select(".vehicle-card")
-        if not cards:
-            # Try more generic: see if any 'li' elements have recognizable structure (for troubleshooting)
-            print("⚠️ No vehicle cards found. Attempting fallback selector 'li'")
-            cards = soup.select("li")
-            print(f"Found {len(cards)} <li> elements. Dumping sample HTML for debug:")
-            for li in cards[:3]:
-                print(str(li)[:1000])
 
         if not cards:
-            print("⚠️ Still no cards found. Exiting.")
+            print("⚠️ No vehicle cards found.")
+            # Optionally, print HTML for debugging:
+            with open("debug_donringler.html", "w", encoding="utf-8") as f:
+                f.write(html)
             return []
 
         for card in cards:
