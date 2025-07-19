@@ -1,0 +1,12 @@
+services:
+  - type: cron
+    name: donringler-scraper
+    schedule: "0 5 * * *"  # Runs daily at 5 AM UTC
+    runtime: python
+    buildCommand: ""
+    startCommand: "python scrape_donringler.py"
+    envVars:
+      - key: SUPABASE_URL
+        value: https://ckdwsvviiuhyqzroswfe.supabase.com
+      - key: SUPABASE_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZHdzdnZpaXVoeXF6cm9zd2ZlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTQ5NzM4OCwiZXhwIjoyMDY1MDczMzg4fQ.nJo4Oz4ak7LTPsnMzcaea0zF1nOXS-ZYpEBUGBarOHY
