@@ -3,6 +3,7 @@ import requests
 import uuid
 from datetime import datetime
 from supabase import create_client, Client
+import time
 
 # ─── Supabase Setup ───────────────────────────────────────────────────────────
 
@@ -27,7 +28,9 @@ def fetch_cars(page=1, retries=3):
         f"?zip={ZIP_CODE}&radius={RADIUS}&page={page}&page_size={PAGE_SIZE}&stock_type=all"
     )
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/124.0.0.0 Safari/537.36"
     }
     for attempt in range(1, retries + 1):
         try:
@@ -40,14 +43,14 @@ def fetch_cars(page=1, retries=3):
         except Exception as e:
             print(f"Error fetching page {page}: {e}")
             if attempt == retries:
-                raise
+                print(f"❌ Failed to fetch page {page} after {retries} attempts.")
+                return {}
             time.sleep(2 * attempt)
     return {}
 
 def parse_cars(results):
     cars = []
     for result in results.get("listings", []):
-        # Defensive parsing for required fields
         inventory_id = result.get("id")
         year = result.get("year")
         make = result.get("make")
@@ -75,9 +78,11 @@ def parse_cars(results):
 def sync_to_supabase(vehicles):
     print(f"🚚 Syncing {len(vehicles)} vehicles to Supabase...")
     for v in vehicles:
-        # Upsert by 'inventory_id' to avoid duplicates
-        supabase.table(SUPABASE_TABLE).upsert(v, on_conflict="inventory_id").execute()
-        print(f"Pushed {v['inventory_id']} - {v['year']} {v['make']} {v['model']} @ ${v['price']}")
+        try:
+            supabase.table(SUPABASE_TABLE).upsert(v, on_conflict="inventory_id").execute()
+            print(f"Pushed {v['inventory_id']} - {v['year']} {v['make']} {v['model']} @ ${v['price']}")
+        except Exception as e:
+            print(f"❌ Error uploading {v['inventory_id']}: {e}")
 
 def main():
     total_found = 0
@@ -87,13 +92,15 @@ def main():
         data = fetch_cars(page)
         cars = parse_cars(data)
         if not cars:
-            print("✅ No more vehicles found.")
+            print(f"✅ No more vehicles found (or page failed). Ending at page {page}.")
             break
         sync_to_supabase(cars)
         total_found += len(cars)
+        # Check if we're done (Cars.com returns total pages in response)
         if page >= data.get("total_page_count", 1):
             break
         page += 1
+        time.sleep(2)  # Throttle between pages
     print(f"✅ Complete. Total vehicles uploaded: {total_found}")
 
 if __name__ == "__main__":
