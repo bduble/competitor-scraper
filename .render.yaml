@@ -5,7 +5,7 @@ services:
     plan: starter
     schedule: "0 9 * * *"  # Daily at 9am UTC
     buildCommand: pip install -r requirements.txt
-    startCommand: python competitor-scraper/scrape_market_comps.py
+    startCommand: python scrape_market_comps.py
 
   - type: cron
     name: market-comps-cargurus-scraper
@@ -13,4 +13,4 @@ services:
     plan: starter
     schedule: "30 9 * * *"  # Daily at 9:30am UTC
     buildCommand: pip install -r requirements.txt
-    startCommand: python competitor-scraper/scrape_cargurus_market_comps.py
+    startCommand: python scrape_cargurus.py
