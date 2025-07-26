@@ -21,14 +21,28 @@ ZIP_CODE = "76504"   # Temple, TX
 RADIUS = 100
 PAGE_SIZE = 100
 
-def fetch_cars(page=1):
+def fetch_cars(page=1, retries=3):
     url = (
         f"https://www.cars.com/shopping/results/"
         f"?zip={ZIP_CODE}&radius={RADIUS}&page={page}&page_size={PAGE_SIZE}&stock_type=all"
     )
-    resp = requests.get(url, timeout=30)
-    resp.raise_for_status()
-    return resp.json()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    }
+    for attempt in range(1, retries + 1):
+        try:
+            resp = requests.get(url, headers=headers, timeout=90)
+            resp.raise_for_status()
+            return resp.json()
+        except requests.exceptions.ReadTimeout:
+            print(f"Timeout (attempt {attempt}/{retries}) for page {page}. Retrying...")
+            time.sleep(2 * attempt)
+        except Exception as e:
+            print(f"Error fetching page {page}: {e}")
+            if attempt == retries:
+                raise
+            time.sleep(2 * attempt)
+    return {}
 
 def parse_cars(results):
     cars = []
