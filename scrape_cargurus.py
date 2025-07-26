@@ -20,6 +20,11 @@ BRIGHTDATA_PROXY = os.getenv("BRIGHTDATA_PROXY", "brd.superproxy.io:33335")
 BRIGHTDATA_USER = os.getenv("BRIGHTDATA_USER", "brd-customer-XXX-zone-residential_proxy1")
 BRIGHTDATA_PASS = os.getenv("BRIGHTDATA_PASS", "xxxxxxxxxxxxxxxx")
 
+proxies = {
+    "http": f"http://{BRIGHTDATA_USER}:{BRIGHTDATA_PASS}@{BRIGHTDATA_PROXY}",
+    "https": f"http://{BRIGHTDATA_USER}:{BRIGHTDATA_PASS}@{BRIGHTDATA_PROXY}"
+}
+
 def get_proxy_dict():
     proxy_url = f"http://{BRIGHTDATA_USER}:{BRIGHTDATA_PASS}@{BRIGHTDATA_PROXY}"
     return {
