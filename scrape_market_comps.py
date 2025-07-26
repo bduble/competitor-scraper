@@ -18,6 +18,10 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+proxies = {
+    "http": f"http://{BRIGHTDATA_USER}:{BRIGHTDATA_PASS}@{BRIGHTDATA_PROXY}",
+    "https": f"http://{BRIGHTDATA_USER}:{BRIGHTDATA_PASS}@{BRIGHTDATA_PROXY}"
+
 # ─── Cars.com Search Parameters ───────────────────────────────────────────────
 
 ZIP_CODE = "76504"   # Temple, TX
