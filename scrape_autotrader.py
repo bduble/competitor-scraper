@@ -5,6 +5,9 @@ import uuid
 from datetime import datetime
 from supabase import create_client, Client
 import time
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 # Supabase setup
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -29,7 +32,7 @@ def fetch_autotrader_page(page=1, retries=3):
     }
     for attempt in range(1, retries + 1):
         try:
-            resp = requests.get(url, headers=headers, proxies=get_proxy_dict(), timeout=90)
+           resp = requests.get(url, proxies=proxies, timeout=90, verify=False)
             resp.raise_for_status()
             return resp.text
         except Exception as e:
