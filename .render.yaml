@@ -1,18 +1,8 @@
-services: []
-
-cron:
-  - name: "donringler-scraper"
-    type: cron
-    schedule: "*/15 * * * *"
-    region: oregon
-    branch: main
-    runtime: python
-    buildCommand: |
-      pip install -r requirements.txt
-      playwright install --with-deps
-    startCommand: python scrape_donringler.py
-    envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_KEY
-        sync: false
+services:
+  - type: cron
+    name: market-comps-carscom-scraper
+    env: python
+    plan: starter
+    schedule: "0 9 * * *"         # Every day at 9am UTC. Change as needed.
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scrape_market_comps.py
