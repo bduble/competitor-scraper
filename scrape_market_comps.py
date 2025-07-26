@@ -4,6 +4,8 @@ import uuid
 from datetime import datetime
 from supabase import create_client, Client
 import time
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ─── Supabase Setup ───────────────────────────────────────────────────────────
 
@@ -34,7 +36,7 @@ def fetch_cars(page=1, retries=3):
     }
     for attempt in range(1, retries + 1):
         try:
-            resp = requests.get(url, headers=headers, timeout=90)
+            resp = requests.get(url, proxies=proxies, timeout=90, verify=False)
             resp.raise_for_status()
             return resp.json()
         except requests.exceptions.ReadTimeout:
