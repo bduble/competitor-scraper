@@ -35,13 +35,14 @@ def fetch_autotrader_page(page=1, retries=3):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     }
-    for attempt in range(1, retries + 1):
-        try:
-           resp = requests.get(url, proxies=proxies, timeout=90, verify=False)
-            resp.raise_for_status()
-            return resp.text
-        except Exception as e:
-            print(f"Error fetching Autotrader page {page}: {e}")
+    for attempt in range(3):
+    try:
+        resp = requests.get(url, proxies=proxies, timeout=30, verify=False)
+        resp.raise_for_status()
+        # ... other lines ...
+        return resp.text
+    except Exception as e:
+        print(f"Error: {e}")
             if attempt == retries:
                 print(f"❌ Failed to fetch Autotrader page {page} after {retries} attempts.")
                 return ""
