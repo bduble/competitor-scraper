@@ -21,6 +21,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 proxies = {
     "http": f"http://{BRIGHTDATA_USER}:{BRIGHTDATA_PASS}@{BRIGHTDATA_PROXY}",
     "https": f"http://{BRIGHTDATA_USER}:{BRIGHTDATA_PASS}@{BRIGHTDATA_PROXY}"
+}
 
 # ─── Cars.com Search Parameters ───────────────────────────────────────────────
 
