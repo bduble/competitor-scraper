@@ -4,7 +4,9 @@ services:
     env: python
     plan: starter
     schedule: "0 9 * * *"
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      playwright install chromium
     startCommand: python scrape_market_comps.py
 
   - type: cron
@@ -12,7 +14,9 @@ services:
     env: python
     plan: starter
     schedule: "30 9 * * *"
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      playwright install chromium
     startCommand: python scrape_cargurus.py
 
   - type: cron
@@ -20,5 +24,17 @@ services:
     env: python
     plan: starter
     schedule: "0 10 * * *"
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      playwright install chromium
     startCommand: python scrape_autotrader.py
+
+  - type: cron
+    name: market-comps-cargurus-playwright
+    env: python
+    plan: starter
+    schedule: "0 8 * * *"
+    buildCommand: |
+      pip install -r requirements.txt
+      playwright install chromium
+    startCommand: python scrape_cargurus_playwright.py
