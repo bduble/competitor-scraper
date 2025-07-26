@@ -3,7 +3,7 @@ services:
     name: market-comps-carscom-scraper
     env: python
     plan: starter
-    schedule: "0 9 * * *"  # Daily at 9am UTC
+    schedule: "0 9 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python scrape_market_comps.py
 
@@ -11,7 +11,7 @@ services:
     name: market-comps-cargurus-scraper
     env: python
     plan: starter
-    schedule: "30 9 * * *"  # Daily at 9:30am UTC
+    schedule: "30 9 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python scrape_cargurus.py
 
@@ -19,6 +19,6 @@ services:
     name: market-comps-autotrader-scraper
     env: python
     plan: starter
-    schedule: "0 10 * * *"  # Daily at 10am UTC (staggered 30 min after Cargurus)
+    schedule: "0 10 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python scrape_autotrader.py
