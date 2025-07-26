@@ -3,14 +3,14 @@ services:
     name: market-comps-carscom-scraper
     env: python
     plan: starter
-    schedule: "0 9 * * *"  # Daily at 9am UTC (adjust as needed)
+    schedule: "0 9 * * *"  # Daily at 9am UTC
     buildCommand: pip install -r requirements.txt
-    startCommand: python scrape_market_comps.py
+    startCommand: python competitor-scraper/scrape_market_comps.py
 
   - type: cron
     name: market-comps-cargurus-scraper
     env: python
     plan: starter
-    schedule: "30 9 * * *"  # Daily at 9:30am UTC (staggered 30 min after Cars.com)
+    schedule: "30 9 * * *"  # Daily at 9:30am UTC
     buildCommand: pip install -r requirements.txt
-    startCommand: python scrape_cargurus_market_comps.py
+    startCommand: python competitor-scraper/scrape_cargurus_market_comps.py
